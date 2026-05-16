@@ -4,6 +4,8 @@ import { useLocation, NavLink, useNavigate } from "react-router-dom";
 
 function Login() {
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   
   const navigate = useNavigate(); // Hook to move pages programmatically
   const location = useLocation(); // Hook to remember the blocked page
@@ -11,9 +13,15 @@ function Login() {
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
+    setError('');
 
     if (!username.trim()) {
-      alert("Please enter a username.");
+      setError("Please enter a username.");
+      return;
+    }
+
+    if (!password.trim()) {
+      setError("Please enter your password.");
       return;
     }
 
@@ -21,7 +29,7 @@ function Login() {
     const existingUsersRaw = localStorage.getItem("soccerBooker_users");
     
     if (!existingUsersRaw) {
-      alert("No registered users found. Please use the link below to Register first!");
+      setError("No registered users found. Please use the link below to Register first!");
       return;
     }
 
@@ -34,11 +42,17 @@ function Login() {
     );
 
     if (!foundUser) {
-      alert("User not found. Check your spelling or Register a new account.");
+      setError("User not found. Check your spelling or Register a new account.");
       return;
     }
 
-    // 4. Prepare the successful user data payload using the stored database values
+    // 4. Verify the password matches
+    if (foundUser.password !== password) {
+      setError("Incorrect password. Please try again.");
+      return;
+    }
+
+    // 5. Prepare the successful user data payload using the stored database values
     const loggedInUser = {
       id: foundUser.id,
       name: foundUser.username,
@@ -58,6 +72,7 @@ function Login() {
   return (
     <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', fontFamily: 'sans-serif' }}>
       <h2>Sign In - SoccerBooker</h2>
+      {error && <div style={{ color: 'red', marginBottom: '15px', padding: '10px', backgroundColor: '#ffe0e0', borderRadius: '4px' }}>{error}</div>}
       <form onSubmit={handleFormSubmit}>
         <div style={{ marginBottom: '15px' }}>
           <label style={{ display: 'block', marginBottom: '5px' }}>Username / Email:</label>
@@ -70,7 +85,16 @@ function Login() {
           />
         </div>
 
-        {/* 💡 Note: The Role dropdown select is removed from here because the database now dictates your role based on registration! */}
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>Password:</label>
+          <input 
+            type="password" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            placeholder="Enter your password"
+            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+          />
+        </div>
 
         <button type="submit" style={{ width: '100%', padding: '10px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
           Sign In
