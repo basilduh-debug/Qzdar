@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../Context/AuthContext";
+import { useAuth } from "../../Context/AuthContext";
 function PrivateRoute({ children,acceptedRole }) {  //userRole prop can be used to restrict access based on user roles (e.g., admin, user)
     const { isAuthenticated,user } = useAuth();
     if(!isAuthenticated) {
