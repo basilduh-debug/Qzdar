@@ -22,7 +22,9 @@ function Login() {
     if (!password.trim()) {
       setError("Please enter your password.");
       return;
-    }
+    } 
+
+
 
     try {
       // Calls the backend /api/auth/signin endpoint via AuthContext
