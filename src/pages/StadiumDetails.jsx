@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, NavLink } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
+import { api } from "../api";
 
 function StadiumDetails() {
   const { id } = useParams();
@@ -10,24 +11,22 @@ function StadiumDetails() {
   const [slots, setSlots] = useState([]);
   const [message, setMessage] = useState("");
 
-  const loadData = () => {
-    // Find the stadium by id in our localStorage database
-    const stadiumsRaw = localStorage.getItem("soccerBooker_stadiums") || "[]";
-    const stadiums = JSON.parse(stadiumsRaw);
-    const found = stadiums.find(s => s.id === id);
-    setStadium(found || null);
-
-    // Load all slots for this stadium
-    const slotsRaw = localStorage.getItem("soccerBooker_slots") || "[]";
-    const allSlots = JSON.parse(slotsRaw);
-    setSlots(allSlots.filter(s => s.stadiumId === id));
+  const loadData = async () => {
+    try {
+      const s = await api("/stadiums/" + id);
+      setStadium(s);
+      const slotsData = await api("/slots/stadium/" + id);
+      setSlots(slotsData);
+    } catch (err) {
+      setStadium(null);
+    }
   };
 
   useEffect(() => {
     loadData();
   }, [id]);
 
-  const handleReserve = (slotId) => {
+  const handleReserve = async (slotId) => {
     // Reserving requires being signed in
     if (!isAuthenticated) {
       navigate("/login", { state: { from: { pathname: "/stadium/" + id } } });
@@ -38,35 +37,27 @@ function StadiumDetails() {
       return;
     }
 
-    const slotsRaw = localStorage.getItem("soccerBooker_slots") || "[]";
-    const allSlots = JSON.parse(slotsRaw);
-    const idx = allSlots.findIndex(s => s.id === slotId);
-    if (idx === -1) return;
-
-    if (allSlots[idx].status === 'reserved') {
-      setMessage("This slot is already reserved.");
-      return;
+    try {
+      await api("/slots/" + slotId + "/reserve", { method: "PUT" });
+      setMessage("Reservation confirmed!");
+      loadData();
+    } catch (err) {
+      setMessage(err.message || "Could not reserve");
     }
-
-    // Mark the slot as reserved by this user
-    allSlots[idx].status = 'reserved';
-    allSlots[idx].userId = user.id;
-    allSlots[idx].userName = user.name;
-    localStorage.setItem("soccerBooker_slots", JSON.stringify(allSlots));
-
-    setMessage("Reservation confirmed!");
-    loadData();
   };
 
   if (!stadium) {
     return <p style={{ textAlign: 'center', marginTop: '50px', fontFamily: 'sans-serif' }}>Stadium not found.</p>;
   }
 
-  // Sort slots by date then time
+  // Sort slots
   const sortedSlots = [...slots].sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date);
     return a.startTime.localeCompare(b.startTime);
   });
+
+  const ownerId = stadium.owner?._id || stadium.owner;
+  const ownerName = stadium.owner?.username || "owner";
 
   return (
     <div style={{ maxWidth: '900px', margin: '30px auto', padding: '20px', fontFamily: 'sans-serif' }}>
@@ -82,9 +73,9 @@ function StadiumDetails() {
         </div>
       )}
 
-      {isAuthenticated && stadium.ownerId !== user?.id && (
+      {isAuthenticated && String(ownerId) !== user?.id && (
         <p>
-          <NavLink to={"/messages?to=" + stadium.ownerId}>Message the owner ({stadium.ownerName})</NavLink>
+          <NavLink to={"/messages?to=" + ownerId}>Message the owner ({ownerName})</NavLink>
         </p>
       )}
 
@@ -98,29 +89,32 @@ function StadiumDetails() {
       {sortedSlots.length === 0 && <p style={{ color: '#666' }}>No slots available yet.</p>}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-        {sortedSlots.map(s => (
-          <div key={s.id} style={{
-            padding: '10px 15px',
-            borderRadius: '4px',
-            color: 'white',
-            background: s.status === 'reserved' ? '#dc3545' : '#28a745',
-            minWidth: '180px'
-          }}>
-            <div style={{ fontWeight: 'bold' }}>{s.date}</div>
-            <div>{s.startTime} - {s.endTime}</div>
-            {s.status === 'available' && (
-              <button
-                onClick={() => handleReserve(s.id)}
-                style={{ marginTop: '5px', padding: '4px 10px', background: 'white', color: '#28a745', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: 'bold' }}
-              >
-                Reserve
-              </button>
-            )}
-            {s.status === 'reserved' && s.userId === user?.id && (
-              <div style={{ fontSize: '12px', marginTop: '5px' }}>Yours</div>
-            )}
-          </div>
-        ))}
+        {sortedSlots.map(s => {
+          const slotUserId = s.user?._id || s.user;
+          return (
+            <div key={s._id} style={{
+              padding: '10px 15px',
+              borderRadius: '4px',
+              color: 'white',
+              background: s.status === 'reserved' ? '#dc3545' : '#28a745',
+              minWidth: '180px'
+            }}>
+              <div style={{ fontWeight: 'bold' }}>{s.date}</div>
+              <div>{s.startTime} - {s.endTime}</div>
+              {s.status === 'available' && (
+                <button
+                  onClick={() => handleReserve(s._id)}
+                  style={{ marginTop: '5px', padding: '4px 10px', background: 'white', color: '#28a745', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: 'bold' }}
+                >
+                  Reserve
+                </button>
+              )}
+              {s.status === 'reserved' && String(slotUserId) === user?.id && (
+                <div style={{ fontSize: '12px', marginTop: '5px' }}>Yours</div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <p style={{ fontSize: '14px', color: '#666', marginTop: '15px' }}>

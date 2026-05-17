@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { useAuth } from "../../../Context/AuthContext";
+import { api } from "../../../api";
 
 function StadiumForm({ onStadiumAdded }) {
-  const { user } = useAuth();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [photos, setPhotos] = useState([]);
   const [error, setError] = useState("");
 
-  // Convert uploaded files to base64 data URLs so we can store them in localStorage
+  // Convert uploaded files to base64 data URLs (sent to backend as strings)
   const handlePhotoChange = (e) => {
     const files = Array.from(e.target.files);
     const readers = files.map(file => {
@@ -22,7 +21,7 @@ function StadiumForm({ onStadiumAdded }) {
     Promise.all(readers).then(dataUrls => setPhotos(dataUrls));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -31,33 +30,24 @@ function StadiumForm({ onStadiumAdded }) {
       return;
     }
 
-    // 1. Read existing stadiums from our localStorage database
-    const existingRaw = localStorage.getItem("soccerBooker_stadiums") || "[]";
-    const stadiumsArray = JSON.parse(existingRaw);
+    try {
+      // POST /api/stadiums - the backend reads the owner from the JWT token
+      await api("/stadiums", {
+        method: "POST",
+        body: JSON.stringify({ name, description, location, photos })
+      });
 
-    // 2. Build the new stadium object
-    const newStadium = {
-      id: "stadium_" + Date.now(),
-      ownerId: user.id,
-      ownerName: user.name,
-      name: name,
-      description: description,
-      location: location,
-      photos: photos
-    };
+      // Reset the form
+      setName("");
+      setDescription("");
+      setLocation("");
+      setPhotos([]);
+      e.target.reset();
 
-    // 3. Push and save
-    stadiumsArray.push(newStadium);
-    localStorage.setItem("soccerBooker_stadiums", JSON.stringify(stadiumsArray));
-
-    // Reset the form
-    setName("");
-    setDescription("");
-    setLocation("");
-    setPhotos([]);
-    e.target.reset();
-
-    if (onStadiumAdded) onStadiumAdded();
+      if (onStadiumAdded) onStadiumAdded();
+    } catch (err) {
+      setError(err.message || "Could not add stadium");
+    }
   };
 
   return (

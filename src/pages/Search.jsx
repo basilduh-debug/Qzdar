@@ -1,53 +1,64 @@
 import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
+import { api } from "../api";
 
 function Search() {
   const [location, setLocation] = useState("");
   const [date, setDate] = useState("");
-  const [allStadiums, setAllStadiums] = useState([]);
   const [results, setResults] = useState([]);
+  const [error, setError] = useState("");
 
-  // Load all stadiums from localStorage on mount
+  // Load all stadiums on mount
   useEffect(() => {
-    const raw = localStorage.getItem("soccerBooker_stadiums") || "[]";
-    const all = JSON.parse(raw);
-    setAllStadiums(all);
-    setResults(all);
+    api("/stadiums")
+      .then(setResults)
+      .catch(err => setError(err.message || "Could not load stadiums"));
   }, []);
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
+    setError("");
 
-    let filtered = allStadiums;
-
-    // Filter by location (case-insensitive substring match)
-    if (location.trim()) {
-      const locLower = location.toLowerCase();
-      filtered = filtered.filter(s => s.location.toLowerCase().includes(locLower));
+    try {
+      if (date) {
+        // If a date is given, search via slots/search which checks availability
+        const slots = await api("/slots/search?date=" + encodeURIComponent(date) +
+                                (location ? "&location=" + encodeURIComponent(location) : ""));
+        // Get the unique stadiums from those slots
+        const seen = new Set();
+        const stadiums = [];
+        for (const s of slots) {
+          if (s.stadium && !seen.has(s.stadium._id)) {
+            seen.add(s.stadium._id);
+            stadiums.push(s.stadium);
+          }
+        }
+        setResults(stadiums);
+      } else {
+        // Just filter by location
+        const r = await api("/stadiums?location=" + encodeURIComponent(location));
+        setResults(r);
+      }
+    } catch (err) {
+      setError(err.message || "Search failed");
     }
-
-    // Filter by time-slot availability: keep stadiums with at least one available slot on this date
-    if (date) {
-      const allSlotsRaw = localStorage.getItem("soccerBooker_slots") || "[]";
-      const allSlots = JSON.parse(allSlotsRaw);
-      const stadiumsWithSlot = new Set(
-        allSlots.filter(s => s.date === date && s.status === 'available').map(s => s.stadiumId)
-      );
-      filtered = filtered.filter(s => stadiumsWithSlot.has(s.id));
-    }
-
-    setResults(filtered);
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     setLocation("");
     setDate("");
-    setResults(allStadiums);
+    try {
+      const all = await api("/stadiums");
+      setResults(all);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
     <div style={{ maxWidth: '900px', margin: '30px auto', padding: '20px', fontFamily: 'sans-serif' }}>
       <h1>Search Stadiums</h1>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
 
       <form onSubmit={handleSearch} style={{ padding: '15px', border: '1px solid #ccc', borderRadius: '6px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -86,13 +97,13 @@ function Search() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
         {results.map(s => (
-          <div key={s.id} style={{ padding: '15px', border: '1px solid #ccc', borderRadius: '6px', display: 'flex', gap: '15px' }}>
+          <div key={s._id} style={{ padding: '15px', border: '1px solid #ccc', borderRadius: '6px', display: 'flex', gap: '15px' }}>
             {s.photos && s.photos.length > 0 && (
               <img src={s.photos[0]} alt={s.name} style={{ width: '120px', height: '90px', objectFit: 'cover', borderRadius: '4px' }} />
             )}
             <div style={{ flex: 1 }}>
               <h3 style={{ margin: '0 0 5px 0' }}>
-                <NavLink to={"/stadium/" + s.id}>{s.name}</NavLink>
+                <NavLink to={"/stadium/" + s._id}>{s.name}</NavLink>
               </h3>
               <p style={{ margin: '0 0 5px 0', color: '#666' }}>{s.location}</p>
               <p style={{ margin: '0' }}>{s.description}</p>

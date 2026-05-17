@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
+import { api } from "../api";
 
 function Messages() {
   const { user } = useAuth();
@@ -10,57 +11,39 @@ function Messages() {
   const [conversations, setConversations] = useState([]);
   const [chat, setChat] = useState([]);
   const [text, setText] = useState("");
+  const [error, setError] = useState("");
 
-  // Build the inbox: distinct users I've exchanged messages with
-  const loadInbox = () => {
-    const raw = localStorage.getItem("soccerBooker_messages") || "[]";
-    const all = JSON.parse(raw);
-
-    const mine = all.filter(m => m.fromId === user.id || m.toId === user.id);
-    mine.sort((a, b) => b.createdAt - a.createdAt);
-
-    const seen = new Set();
-    const inbox = [];
-    for (const m of mine) {
-      const otherId = m.fromId === user.id ? m.toId : m.fromId;
-      const otherName = m.fromId === user.id ? m.toName : m.fromName;
-      if (!seen.has(otherId)) {
-        seen.add(otherId);
-        inbox.push({ id: otherId, name: otherName, lastMessage: m.text, when: m.createdAt });
-      }
+  const loadInbox = async () => {
+    try {
+      const data = await api("/messages/inbox");
+      setConversations(data);
+    } catch (err) {
+      setError(err.message || "Could not load inbox");
     }
-
-    setConversations(inbox);
   };
 
-  // Load the chat history with one specific user
-  const loadChat = (withUserId) => {
+  const loadChat = async (withUserId) => {
     if (!withUserId) {
       setChat([]);
       setOtherUserName("");
       return;
     }
+    try {
+      const data = await api("/messages/with/" + withUserId);
+      setChat(data);
 
-    const raw = localStorage.getItem("soccerBooker_messages") || "[]";
-    const all = JSON.parse(raw);
-    const thread = all.filter(m =>
-      (m.fromId === user.id && m.toId === withUserId) ||
-      (m.fromId === withUserId && m.toId === user.id)
-    ).sort((a, b) => a.createdAt - b.createdAt);
-
-    setChat(thread);
-
-    // Figure out the other user's display name
-    if (thread.length > 0) {
-      const sample = thread[0];
-      const name = sample.fromId === user.id ? sample.toName : sample.fromName;
-      setOtherUserName(name);
-    } else {
-      // No messages yet — look the user up in the users database
-      const usersRaw = localStorage.getItem("soccerBooker_users") || "[]";
-      const users = JSON.parse(usersRaw);
-      const other = users.find(u => u.id === withUserId);
-      setOtherUserName(other?.username || "Unknown user");
+      // Set the other user's display name based on the conversation
+      if (data.length > 0) {
+        const sample = data[0];
+        const name = String(sample.from._id) === user.id ? sample.to.username : sample.from.username;
+        setOtherUserName(name);
+      } else {
+        // No messages yet - try to find the name from the inbox if available
+        const fromInbox = conversations.find(c => String(c.id) === String(withUserId));
+        setOtherUserName(fromInbox?.name || "Unknown user");
+      }
+    } catch (err) {
+      setError(err.message || "Could not load conversation");
     }
   };
 
@@ -70,36 +53,29 @@ function Messages() {
 
   useEffect(() => {
     loadChat(otherUserId);
-  }, [otherUserId]);
+  }, [otherUserId, conversations]);
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
     if (!otherUserId || !text.trim()) return;
 
-    const raw = localStorage.getItem("soccerBooker_messages") || "[]";
-    const all = JSON.parse(raw);
-
-    const newMsg = {
-      id: "msg_" + Date.now(),
-      fromId: user.id,
-      fromName: user.name,
-      toId: otherUserId,
-      toName: otherUserName,
-      text: text.trim(),
-      createdAt: Date.now()
-    };
-
-    all.push(newMsg);
-    localStorage.setItem("soccerBooker_messages", JSON.stringify(all));
-
-    setText("");
-    loadChat(otherUserId);
-    loadInbox();
+    try {
+      await api("/messages", {
+        method: "POST",
+        body: JSON.stringify({ to: otherUserId, text: text.trim() })
+      });
+      setText("");
+      loadChat(otherUserId);
+      loadInbox();
+    } catch (err) {
+      setError(err.message || "Could not send message");
+    }
   };
 
   return (
     <div style={{ maxWidth: '900px', margin: '30px auto', padding: '20px', fontFamily: 'sans-serif' }}>
       <h1>Messages</h1>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
 
       <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
         {/* Inbox column */}
@@ -137,9 +113,9 @@ function Messages() {
                 {chat.length === 0 && <p style={{ color: '#666' }}>No messages yet. Say hi!</p>}
                 {chat.map(m => (
                   <div
-                    key={m.id}
+                    key={m._id}
                     style={{
-                      textAlign: m.fromId === user.id ? 'right' : 'left',
+                      textAlign: String(m.from._id) === user.id ? 'right' : 'left',
                       margin: '6px 0'
                     }}
                   >
@@ -148,8 +124,8 @@ function Messages() {
                         display: 'inline-block',
                         padding: '8px 12px',
                         borderRadius: '12px',
-                        background: m.fromId === user.id ? '#007bff' : '#e0e0e0',
-                        color: m.fromId === user.id ? 'white' : 'black',
+                        background: String(m.from._id) === user.id ? '#007bff' : '#e0e0e0',
+                        color: String(m.from._id) === user.id ? 'white' : 'black',
                         maxWidth: '70%'
                       }}
                     >

@@ -16,7 +16,7 @@ function ReservationGrid({ slots }) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '15px' }}>
         {sortedSlots.map(s => (
           <div
-            key={s.id}
+            key={s._id}
             style={{
               padding: '10px 15px',
               borderRadius: '4px',
@@ -27,11 +27,11 @@ function ReservationGrid({ slots }) {
           >
             <div style={{ fontWeight: 'bold' }}>{s.date}</div>
             <div>{s.startTime} - {s.endTime}</div>
-            {s.status === 'reserved' && (
+            {s.status === 'reserved' && s.user && (
               <>
-                <div style={{ fontSize: '12px', marginTop: '5px' }}>Reserved by: {s.userName}</div>
+                <div style={{ fontSize: '12px', marginTop: '5px' }}>Reserved by: {s.user.username}</div>
                 <NavLink
-                  to={"/messages?to=" + s.userId}
+                  to={"/messages?to=" + s.user._id}
                   style={{ color: 'white', fontSize: '12px', textDecoration: 'underline' }}
                 >
                   Message user

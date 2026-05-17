@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
+import { api } from "../api";
 import ReservationGrid from "../src/components/Owner/ReservationGrid";
 
 function OwnerStadium() {
@@ -15,31 +16,29 @@ function OwnerStadium() {
   const [error, setError] = useState("");
   const [pageError, setPageError] = useState("");
 
-  const loadStadium = () => {
-    const allStadiumsRaw = localStorage.getItem("soccerBooker_stadiums") || "[]";
-    const allStadiums = JSON.parse(allStadiumsRaw);
-    const found = allStadiums.find(s => s.id === id);
-    if (!found) {
-      setPageError("Stadium not found.");
-      return;
-    }
-    // Only the owner can manage their stadium
-    if (found.ownerId !== user.id) {
-      setPageError("This is not your stadium.");
-      return;
-    }
-    setStadium(found);
+  const loadStadium = async () => {
+    try {
+      const s = await api("/stadiums/" + id);
+      // Only the owner can manage their stadium
+      const ownerId = s.owner?._id || s.owner;
+      if (String(ownerId) !== user.id) {
+        setPageError("This is not your stadium.");
+        return;
+      }
+      setStadium(s);
 
-    const allSlotsRaw = localStorage.getItem("soccerBooker_slots") || "[]";
-    const allSlots = JSON.parse(allSlotsRaw);
-    setSlots(allSlots.filter(s => s.stadiumId === id));
+      const slotsData = await api("/slots/stadium/" + id);
+      setSlots(slotsData);
+    } catch (err) {
+      setPageError(err.message || "Stadium not found.");
+    }
   };
 
   useEffect(() => {
     loadStadium();
   }, [id]);
 
-  const handleAddSlot = (e) => {
+  const handleAddSlot = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -47,44 +46,23 @@ function OwnerStadium() {
       setError("Please fill date, start time and end time.");
       return;
     }
-
-    // The slot date must be within the next 7 days
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const slotDate = new Date(date);
-    const diffDays = (slotDate - today) / (1000 * 60 * 60 * 24);
-    if (diffDays < 0 || diffDays > 7) {
-      setError("Date must be within the next 7 days.");
-      return;
-    }
-
     if (startTime >= endTime) {
       setError("End time must be after start time.");
       return;
     }
 
-    const allSlotsRaw = localStorage.getItem("soccerBooker_slots") || "[]";
-    const allSlots = JSON.parse(allSlotsRaw);
-
-    const newSlot = {
-      id: "slot_" + Date.now(),
-      stadiumId: id,
-      date: date,
-      startTime: startTime,
-      endTime: endTime,
-      status: "available",
-      userId: null,
-      userName: null
-    };
-
-    allSlots.push(newSlot);
-    localStorage.setItem("soccerBooker_slots", JSON.stringify(allSlots));
-
-    // Reset and reload
-    setDate("");
-    setStartTime("");
-    setEndTime("");
-    loadStadium();
+    try {
+      await api("/slots", {
+        method: "POST",
+        body: JSON.stringify({ stadium: id, date, startTime, endTime })
+      });
+      setDate("");
+      setStartTime("");
+      setEndTime("");
+      loadStadium();
+    } catch (err) {
+      setError(err.message || "Could not add slot");
+    }
   };
 
   if (pageError) {
