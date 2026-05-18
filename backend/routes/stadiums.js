@@ -1,5 +1,6 @@
 const express = require('express');
 const Stadium = require('../models/Stadium');
+const Slot = require('../models/Slot');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -61,6 +62,25 @@ router.post('/', auth, async (req, res) => {
 
     await stadium.save();
     res.json(stadium);
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+// DELETE /api/stadiums/:id - owner deletes their stadium (and its slots)
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const stadium = await Stadium.findById(req.params.id);
+    if (!stadium) return res.status(404).json({ msg: 'Stadium not found' });
+    if (String(stadium.owner) !== req.user.id) {
+      return res.status(403).json({ msg: 'Not your stadium' });
+    }
+
+    // Remove the stadium's slots first, then the stadium itself
+    await Slot.deleteMany({ stadium: stadium._id });
+    await stadium.deleteOne();
+
+    res.json({ msg: 'Stadium deleted' });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
