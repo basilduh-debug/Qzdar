@@ -16,7 +16,7 @@ function SignUp() {
     setError("");
 
     if (!username || !password) return setError("Please fill in all fields");
-
+    if (password.length < 6) return setError("Password must be at least 6 characters");
     try {
       const user = await signup(username.trim(), password, role);
       navigate(user.role === 'owner' ? '/owner-dashboard' : '/my-matches');

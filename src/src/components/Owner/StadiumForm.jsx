@@ -9,7 +9,7 @@ function StadiumForm({ onStadiumAdded }) {
   const [photos, setPhotos] = useState([]);
   const [error, setError] = useState("");
 
-  // Convert uploaded files to base64 data URLs so we can send them as JSON
+  
   const handlePhotoChange = (e) => {
     const files = Array.from(e.target.files);
     const readers = files.map(file => new Promise((resolve) => {
