@@ -34,7 +34,7 @@ function Home() {
       {/* Two role cards */}
       <div style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
         <div style={card}>
-          <div style={{ fontSize: '32px', marginBottom: '8px' }}>👥</div>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}></div>
           <h3>For Match Organizers</h3>
           <p style={{ color: colors.muted, marginBottom: '16px' }}>
             Search stadiums by location or time, reserve slots, and message owners.
@@ -48,7 +48,7 @@ function Home() {
         </div>
 
         <div style={card}>
-          <div style={{ fontSize: '32px', marginBottom: '8px' }}>🏟️</div>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}></div>
           <h3>For Stadium Owners</h3>
           <p style={{ color: colors.muted, marginBottom: '16px' }}>
             Add your stadium, manage reservation slots, and see statistics.

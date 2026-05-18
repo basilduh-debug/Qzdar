@@ -26,15 +26,7 @@ function OwnerDashboard() {
 
   const handleStadiumAdded = () => loadData();
 
-  const handleDelete = async (stadiumId, name) => {
-    if (!window.confirm(`Delete "${name}" and ALL its slots? This cannot be undone.`)) return;
-    try {
-      await api("/stadiums/" + stadiumId, { method: "DELETE" });
-      loadData();
-    } catch (err) {
-      setError(err.message || "Could not delete");
-    }
-  };
+ 
 
   const Stat = ({ label, value, color }) => (
     <div style={{
@@ -110,7 +102,7 @@ function OwnerDashboard() {
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <h3 style={{ margin: 0, marginBottom: '4px' }}>{s.name}</h3>
-                <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '4px' }}>📍 {s.location}</p>
+                <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '4px' }}>{s.location}</p>
                 <p style={{ fontSize: '14px', marginBottom: '10px' }}>{s.description}</p>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <NavLink to={"/owner/stadium/" + s._id} style={{ ...button.primary, padding: '6px 12px', fontSize: '13px' }}>
@@ -119,12 +111,7 @@ function OwnerDashboard() {
                   <NavLink to={"/stadium/" + s._id} style={{ ...button.outline, padding: '6px 12px', fontSize: '13px' }}>
                     View public page
                   </NavLink>
-                  <button
-                    onClick={() => handleDelete(s._id, s.name)}
-                    style={{ ...button.danger, padding: '6px 12px', fontSize: '13px' }}
-                  >
-                    🗑 Delete
-                  </button>
+                 
                 </div>
               </div>
             </div>

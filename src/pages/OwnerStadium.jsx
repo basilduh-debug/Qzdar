@@ -56,6 +56,7 @@ function OwnerStadium() {
         method: "POST",
         body: JSON.stringify({ stadium: id, date, startTime, endTime })
       });
+
       setDate("");
       setStartTime("");
       setEndTime("");
@@ -65,15 +66,6 @@ function OwnerStadium() {
     }
   };
 
-  const handleDeleteStadium = async () => {
-    if (!window.confirm("Delete this stadium and ALL its slots? This cannot be undone.")) return;
-    try {
-      await api("/stadiums/" + id, { method: "DELETE" });
-      navigate("/owner-dashboard");
-    } catch (err) {
-      setError(err.message || "Could not delete");
-    }
-  };
 
   if (pageError) {
     return (
@@ -94,11 +86,9 @@ function OwnerStadium() {
       <div style={{ ...card, display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
         <div style={{ flex: 1 }}>
           <h1 style={{ margin: 0, marginBottom: '4px' }}>{stadium.name}</h1>
-          <p style={{ color: colors.muted }}>📍 {stadium.location}</p>
+          <p style={{ color: colors.muted }}> {stadium.location}</p>
         </div>
-        <button onClick={handleDeleteStadium} style={button.danger}>
-          🗑 Delete Stadium
-        </button>
+        
       </div>
 
       {/* Add slot form */}

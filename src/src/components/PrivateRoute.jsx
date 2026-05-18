@@ -5,7 +5,7 @@ function PrivateRoute({ children,acceptedRole }) {  //userRole prop can be used 
     if(!isAuthenticated) {
         return (
             <div>
-                <Navigate to="/login" replace/> // Redirect to login page if not authenticated, clear history to prevent back navigation
+                <Navigate to="/login" replace/> //Redirect to login page if not authenticated, clear history to prevent back navigation
             </div>
         );
     }

@@ -83,7 +83,7 @@ function Search() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="submit" style={button.primary}>🔍 Search</button>
+            <button type="submit" style={button.primary}> Search</button>
             <button type="button" onClick={handleReset} style={button.outline}>Reset</button>
           </div>
         </form>
@@ -137,7 +137,7 @@ function Search() {
 
             <div style={{ flex: 1, minWidth: 0 }}>
               <h3 style={{ margin: 0, marginBottom: '4px' }}>{s.name}</h3>
-              <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '8px' }}>📍 {s.location}</p>
+              <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '8px' }}> {s.location}</p>
               <p style={{ fontSize: '14px', marginBottom: '10px', color: colors.muted }}>{s.description}</p>
               <NavLink to={"/stadium/" + s._id} style={{ ...button.primary, padding: '6px 14px', fontSize: '13px' }}>
                 View & book →
