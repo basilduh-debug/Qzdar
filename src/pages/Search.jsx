@@ -1,30 +1,30 @@
 import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { api } from "../api";
+import { colors, page, card, button, input, label } from "../theme";
 
 function Search() {
   const [location, setLocation] = useState("");
   const [date, setDate] = useState("");
   const [results, setResults] = useState([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // Load all stadiums on mount
   useEffect(() => {
     api("/stadiums")
-      .then(setResults)
-      .catch(err => setError(err.message || "Could not load stadiums"));
+      .then(r => { setResults(r); setLoading(false); })
+      .catch(err => { setError(err.message); setLoading(false); });
   }, []);
 
   const handleSearch = async (e) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
       if (date) {
-        // If a date is given, search via slots/search which checks availability
         const slots = await api("/slots/search?date=" + encodeURIComponent(date) +
                                 (location ? "&location=" + encodeURIComponent(location) : ""));
-        // Get the unique stadiums from those slots
         const seen = new Set();
         const stadiums = [];
         for (const s of slots) {
@@ -35,78 +35,113 @@ function Search() {
         }
         setResults(stadiums);
       } else {
-        // Just filter by location
         const r = await api("/stadiums?location=" + encodeURIComponent(location));
         setResults(r);
       }
     } catch (err) {
-      setError(err.message || "Search failed");
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleReset = async () => {
-    setLocation("");
-    setDate("");
+    setLocation(""); setDate("");
+    setLoading(true);
     try {
       const all = await api("/stadiums");
       setResults(all);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '900px', margin: '30px auto', padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1>Search Stadiums</h1>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+    <div style={page}>
+      <h1>Find a Stadium</h1>
+      <p style={{ color: colors.muted, marginBottom: '20px' }}>Search by location or available date.</p>
 
-      <form onSubmit={handleSearch} style={{ padding: '15px', border: '1px solid #ccc', borderRadius: '6px', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div style={{ flex: '1 1 200px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>Location:</label>
-            <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. Algiers"
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-            />
+      {/* Search form */}
+      <div style={card}>
+        <form onSubmit={handleSearch}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+            <div>
+              <label style={label}>Location</label>
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g. Riyadh"
+                style={input}
+              />
+            </div>
+            <div>
+              <label style={label}>Available on date</label>
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={input} />
+            </div>
           </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px' }}>Available on date:</label>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '8px' }} />
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button type="submit" style={button.primary}>🔍 Search</button>
+            <button type="button" onClick={handleReset} style={button.outline}>Reset</button>
           </div>
-          <button
-            type="submit"
-            style={{ padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-          >
-            Search
-          </button>
-          <button
-            type="button"
-            onClick={handleReset}
-            style={{ padding: '10px 20px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-          >
-            Reset
-          </button>
+        </form>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div style={{
+          padding: '10px 12px',
+          background: '#fef2f2',
+          color: colors.danger,
+          borderRadius: '8px',
+          marginBottom: '12px'
+        }}>{error}</div>
+      )}
+
+      {/* Results */}
+      <h2>Results <span style={{ color: colors.muted, fontWeight: 500, fontSize: '16px' }}>({results.length})</span></h2>
+
+      {loading && <p style={{ color: colors.muted }}>Loading...</p>}
+      {!loading && results.length === 0 && (
+        <div style={{ ...card, textAlign: 'center', padding: '40px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '8px' }}>🔍</div>
+          <p style={{ color: colors.muted }}>No stadiums match your criteria.</p>
         </div>
-      </form>
+      )}
 
-      <h2>Results ({results.length})</h2>
-      {results.length === 0 && <p style={{ color: '#666' }}>No stadiums match your criteria.</p>}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {results.map(s => (
-          <div key={s._id} style={{ padding: '15px', border: '1px solid #ccc', borderRadius: '6px', display: 'flex', gap: '15px' }}>
-            {s.photos && s.photos.length > 0 && (
-              <img src={s.photos[0]} alt={s.name} style={{ width: '120px', height: '90px', objectFit: 'cover', borderRadius: '4px' }} />
+          <div key={s._id} style={{
+            ...card,
+            display: 'flex',
+            gap: '14px',
+            alignItems: 'center',
+            padding: '14px'
+          }}>
+            {s.photos && s.photos.length > 0 ? (
+              <img src={s.photos[0]} alt={s.name} style={{ width: '140px', height: '100px', objectFit: 'cover', borderRadius: '10px' }} />
+            ) : (
+              <div style={{
+                width: '140px',
+                height: '100px',
+                background: 'linear-gradient(135deg, #e3f2fd, #bbdefb)',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '36px'
+              }}>⚽</div>
             )}
-            <div style={{ flex: 1 }}>
-              <h3 style={{ margin: '0 0 5px 0' }}>
-                <NavLink to={"/stadium/" + s._id}>{s.name}</NavLink>
-              </h3>
-              <p style={{ margin: '0 0 5px 0', color: '#666' }}>{s.location}</p>
-              <p style={{ margin: '0' }}>{s.description}</p>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h3 style={{ margin: 0, marginBottom: '4px' }}>{s.name}</h3>
+              <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '8px' }}>📍 {s.location}</p>
+              <p style={{ fontSize: '14px', marginBottom: '10px', color: colors.muted }}>{s.description}</p>
+              <NavLink to={"/stadium/" + s._id} style={{ ...button.primary, padding: '6px 14px', fontSize: '13px' }}>
+                View & book →
+              </NavLink>
             </div>
           </div>
         ))}

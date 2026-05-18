@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
 import { api } from "../api";
+import { colors, page, card, button } from "../theme";
 import StadiumForm from "../src/components/Owner/StadiumForm";
 
 function OwnerDashboard() {
@@ -14,7 +15,6 @@ function OwnerDashboard() {
     try {
       const myStadiums = await api("/stadiums/mine");
       setStadiums(myStadiums);
-
       const s = await api("/slots/stats");
       setStats(s);
     } catch (err) {
@@ -22,62 +22,114 @@ function OwnerDashboard() {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, [user]);
+  useEffect(() => { loadData(); }, [user]);
 
-  // Reload after a new stadium is added
-  const handleStadiumAdded = () => {
-    loadData();
+  const handleStadiumAdded = () => loadData();
+
+  const handleDelete = async (stadiumId, name) => {
+    if (!window.confirm(`Delete "${name}" and ALL its slots? This cannot be undone.`)) return;
+    try {
+      await api("/stadiums/" + stadiumId, { method: "DELETE" });
+      loadData();
+    } catch (err) {
+      setError(err.message || "Could not delete");
+    }
   };
 
-  return (
-    <div style={{ maxWidth: '900px', margin: '30px auto', padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1>Owner Dashboard</h1>
-      <p>Welcome, {user?.name}!</p>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+  const Stat = ({ label, value, color }) => (
+    <div style={{
+      ...card,
+      flex: 1,
+      minWidth: '140px',
+      marginBottom: 0,
+      borderLeft: '4px solid ' + color
+    }}>
+      <div style={{ fontSize: '28px', fontWeight: 700, color }}>{value}</div>
+      <div style={{ fontSize: '13px', color: colors.muted, marginTop: '4px' }}>{label}</div>
+    </div>
+  );
 
-      <h2>Statistics</h2>
-      <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '30px' }}>
-        <div style={{ padding: '15px 20px', background: '#e8f4ff', borderRadius: '6px', minWidth: '120px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{stats.stadiums}</div>
-          <div style={{ fontSize: '14px', color: '#666' }}>Stadiums</div>
-        </div>
-        <div style={{ padding: '15px 20px', background: '#f0f0f0', borderRadius: '6px', minWidth: '120px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{stats.totalSlots}</div>
-          <div style={{ fontSize: '14px', color: '#666' }}>Total slots</div>
-        </div>
-        <div style={{ padding: '15px 20px', background: '#ffe0e0', borderRadius: '6px', minWidth: '120px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{stats.reserved}</div>
-          <div style={{ fontSize: '14px', color: '#666' }}>Reserved</div>
-        </div>
-        <div style={{ padding: '15px 20px', background: '#d4edda', borderRadius: '6px', minWidth: '120px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{stats.available}</div>
-          <div style={{ fontSize: '14px', color: '#666' }}>Available</div>
-        </div>
+  return (
+    <div style={page}>
+      <h1>Owner Dashboard</h1>
+      <p style={{ color: colors.muted, marginBottom: '20px' }}>Welcome back, {user?.name}</p>
+
+      {error && (
+        <div style={{
+          padding: '10px 12px',
+          background: '#fef2f2',
+          color: colors.danger,
+          borderRadius: '8px',
+          marginBottom: '12px'
+        }}>{error}</div>
+      )}
+
+      {/* Stats row */}
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
+        <Stat label="Stadiums" value={stats.stadiums} color={colors.primary} />
+        <Stat label="Total slots" value={stats.totalSlots} color="#6c757d" />
+        <Stat label="Reserved" value={stats.reserved} color={colors.danger} />
+        <Stat label="Available" value={stats.available} color={colors.success} />
       </div>
 
-      <h2>Add a New Stadium</h2>
-      <StadiumForm onStadiumAdded={handleStadiumAdded} />
+      {/* Add stadium */}
+      <div style={card}>
+        <h2 style={{ marginTop: 0 }}>Add a New Stadium</h2>
+        <StadiumForm onStadiumAdded={handleStadiumAdded} />
+      </div>
 
-      <h2 style={{ marginTop: '30px' }}>My Stadiums</h2>
-      {stadiums.length === 0 && <p style={{ color: '#666' }}>You haven't added any stadiums yet.</p>}
+      {/* My stadiums */}
+      <div style={card}>
+        <h2 style={{ marginTop: 0 }}>My Stadiums</h2>
+        {stadiums.length === 0 && <p style={{ color: colors.muted }}>You haven't added any stadiums yet.</p>}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {stadiums.map(s => (
-          <div key={s._id} style={{ padding: '15px', border: '1px solid #ccc', borderRadius: '6px', display: 'flex', gap: '15px' }}>
-            {s.photos && s.photos.length > 0 && (
-              <img src={s.photos[0]} alt={s.name} style={{ width: '100px', height: '75px', objectFit: 'cover', borderRadius: '4px' }} />
-            )}
-            <div style={{ flex: 1 }}>
-              <h3 style={{ margin: '0 0 5px 0' }}>{s.name}</h3>
-              <p style={{ margin: '0 0 5px 0', color: '#666' }}>{s.location}</p>
-              <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}>{s.description}</p>
-              <NavLink to={"/owner/stadium/" + s._id} style={{ marginRight: '10px' }}>Manage slots & reservations</NavLink>
-              <NavLink to={"/stadium/" + s._id}>View public page</NavLink>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {stadiums.map(s => (
+            <div key={s._id} style={{
+              padding: '14px',
+              border: '1px solid ' + colors.border,
+              borderRadius: '12px',
+              display: 'flex',
+              gap: '14px',
+              alignItems: 'flex-start'
+            }}>
+              {s.photos && s.photos.length > 0 ? (
+                <img src={s.photos[0]} alt={s.name} style={{ width: '110px', height: '85px', objectFit: 'cover', borderRadius: '8px' }} />
+              ) : (
+                <div style={{
+                  width: '110px',
+                  height: '85px',
+                  background: '#f0f0f0',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '28px'
+                }}>⚽</div>
+              )}
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{ margin: 0, marginBottom: '4px' }}>{s.name}</h3>
+                <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '4px' }}>📍 {s.location}</p>
+                <p style={{ fontSize: '14px', marginBottom: '10px' }}>{s.description}</p>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <NavLink to={"/owner/stadium/" + s._id} style={{ ...button.primary, padding: '6px 12px', fontSize: '13px' }}>
+                    Manage slots
+                  </NavLink>
+                  <NavLink to={"/stadium/" + s._id} style={{ ...button.outline, padding: '6px 12px', fontSize: '13px' }}>
+                    View public page
+                  </NavLink>
+                  <button
+                    onClick={() => handleDelete(s._id, s.name)}
+                    style={{ ...button.danger, padding: '6px 12px', fontSize: '13px' }}
+                  >
+                    🗑 Delete
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

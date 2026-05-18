@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
 import { api } from "../api";
+import { colors, page, card, button, input, label, generateTimeOptions } from "../theme";
 import ReservationGrid from "../src/components/Owner/ReservationGrid";
+
+const TIME_OPTIONS = generateTimeOptions();
 
 function OwnerStadium() {
   const { id } = useParams();
@@ -19,7 +22,6 @@ function OwnerStadium() {
   const loadStadium = async () => {
     try {
       const s = await api("/stadiums/" + id);
-      // Only the owner can manage their stadium
       const ownerId = s.owner?._id || s.owner;
       if (String(ownerId) !== user.id) {
         setPageError("This is not your stadium.");
@@ -34,9 +36,7 @@ function OwnerStadium() {
     }
   };
 
-  useEffect(() => {
-    loadStadium();
-  }, [id]);
+  useEffect(() => { loadStadium(); }, [id]);
 
   const handleAddSlot = async (e) => {
     e.preventDefault();
@@ -65,57 +65,89 @@ function OwnerStadium() {
     }
   };
 
+  const handleDeleteStadium = async () => {
+    if (!window.confirm("Delete this stadium and ALL its slots? This cannot be undone.")) return;
+    try {
+      await api("/stadiums/" + id, { method: "DELETE" });
+      navigate("/owner-dashboard");
+    } catch (err) {
+      setError(err.message || "Could not delete");
+    }
+  };
+
   if (pageError) {
     return (
-      <div style={{ maxWidth: '600px', margin: '50px auto', padding: '20px', fontFamily: 'sans-serif' }}>
-        <p style={{ color: 'red' }}>{pageError}</p>
-        <button
-          onClick={() => navigate("/owner-dashboard")}
-          style={{ padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-        >
+      <div style={{ ...page, textAlign: 'center', marginTop: '60px' }}>
+        <p style={{ color: colors.danger, marginBottom: '16px' }}>{pageError}</p>
+        <button onClick={() => navigate("/owner-dashboard")} style={button.primary}>
           Back to Dashboard
         </button>
       </div>
     );
   }
 
-  if (!stadium) return <p style={{ textAlign: 'center', marginTop: '50px', fontFamily: 'sans-serif' }}>Loading...</p>;
+  if (!stadium) return <p style={{ ...page, textAlign: 'center' }}>Loading...</p>;
 
   return (
-    <div style={{ maxWidth: '900px', margin: '30px auto', padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1>{stadium.name}</h1>
-      <p style={{ color: '#666' }}>{stadium.location}</p>
-
-      <h2>Add a Reservation Slot</h2>
-      <p style={{ fontSize: '14px', color: '#666' }}>You can only add slots for the next 7 days.</p>
-
-      <form onSubmit={handleAddSlot} style={{ padding: '15px', border: '1px solid #ccc', borderRadius: '6px', marginBottom: '30px' }}>
-        {error && <div style={{ color: 'red', marginBottom: '10px', padding: '8px', backgroundColor: '#ffe0e0', borderRadius: '4px' }}>{error}</div>}
-
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px' }}>Date:</label>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '8px' }} />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px' }}>Start time:</label>
-            <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} style={{ padding: '8px' }} />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px' }}>End time:</label>
-            <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} style={{ padding: '8px' }} />
-          </div>
-          <button
-            type="submit"
-            style={{ padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-          >
-            Add Slot
-          </button>
+    <div style={page}>
+      {/* Header */}
+      <div style={{ ...card, display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+        <div style={{ flex: 1 }}>
+          <h1 style={{ margin: 0, marginBottom: '4px' }}>{stadium.name}</h1>
+          <p style={{ color: colors.muted }}>📍 {stadium.location}</p>
         </div>
-      </form>
+        <button onClick={handleDeleteStadium} style={button.danger}>
+          🗑 Delete Stadium
+        </button>
+      </div>
 
-      <h2>Reservation Status</h2>
-      <ReservationGrid slots={slots} />
+      {/* Add slot form */}
+      <div style={card}>
+        <h2 style={{ marginTop: 0 }}>Add a Reservation Slot</h2>
+        <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '16px' }}>
+          You can only add slots for the next 7 days. Times are in 30-minute increments.
+        </p>
+
+        {error && (
+          <div style={{
+            color: colors.danger,
+            padding: '10px 12px',
+            background: '#fef2f2',
+            borderRadius: '8px',
+            marginBottom: '12px'
+          }}>{error}</div>
+        )}
+
+        <form onSubmit={handleAddSlot}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+            <div>
+              <label style={label}>Date</label>
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={input} />
+            </div>
+            <div>
+              <label style={label}>Start time</label>
+              <select value={startTime} onChange={(e) => setStartTime(e.target.value)} style={input}>
+                <option value="">Select...</option>
+                {TIME_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={label}>End time</label>
+              <select value={endTime} onChange={(e) => setEndTime(e.target.value)} style={input}>
+                <option value="">Select...</option>
+                {TIME_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <button type="submit" style={button.primary}>+ Add Slot</button>
+        </form>
+      </div>
+
+      {/* Reservation status grid */}
+      <div style={card}>
+        <h2 style={{ marginTop: 0 }}>Reservation Status</h2>
+        <ReservationGrid slots={slots} />
+      </div>
     </div>
   );
 }
