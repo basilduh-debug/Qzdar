@@ -65,10 +65,10 @@ function MyMatches() {
             borderLeft: '4px solid ' + colors.primary
           }}>
             <h3 style={{ margin: 0, marginBottom: '4px' }}>{r.stadium?.name || "Unknown stadium"}</h3>
-            <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '8px' }}>📍 {r.stadium?.location}</p>
+            <p style={{ color: colors.muted, fontSize: '14px', marginBottom: '8px' }}> {r.stadium?.location}</p>
             <p style={{ marginBottom: '12px' }}>
-              📅 <strong>{formatDateShort(r.date)}</strong>
-              <span style={{ marginLeft: '12px' }}>⏰ {formatTime12h(r.startTime)} - {formatTime12h(r.endTime)}</span>
+               <strong>{formatDateShort(r.date)}</strong>
+              <span style={{ marginLeft: '12px' }}> {formatTime12h(r.startTime)} - {formatTime12h(r.endTime)}</span>
             </p>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button
@@ -82,7 +82,7 @@ function MyMatches() {
                   to={"/messages?to=" + r.stadium.owner}
                   style={{ ...button.outline, padding: '8px 14px', fontSize: '13px' }}
                 >
-                  💬 Message owner
+                   Message owner
                 </NavLink>
               )}
             </div>
