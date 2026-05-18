@@ -19,25 +19,39 @@ const NotFound = () => (
   </div>
 );
 
-// One reusable nav link styled as a pill / button
+// Nav link rendered as a solid pill button
 function NavButton({ to, children, primary }) {
   return (
     <NavLink
       to={to}
-      style={({ isActive }) => ({
-        padding: '8px 16px',
-        borderRadius: '8px',
-        textDecoration: 'none',
-        fontSize: '14px',
-        fontWeight: 600,
-        transition: 'background 0.15s',
-        background: primary
-          ? colors.primary
-          : isActive ? '#eef3ff' : 'transparent',
-        color: primary
-          ? 'white'
-          : isActive ? colors.primary : colors.text
-      })}
+      style={({ isActive }) => {
+        // Primary = the "Sign Up" call-to-action
+        if (primary) {
+          return {
+            padding: '8px 18px',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontSize: '14px',
+            fontWeight: 600,
+            background: colors.primary,
+            color: 'white',
+            border: '1px solid ' + colors.primary,
+            transition: 'background 0.15s'
+          };
+        }
+        // Active button = brand color, inactive = light gray pill
+        return {
+          padding: '8px 18px',
+          borderRadius: '8px',
+          textDecoration: 'none',
+          fontSize: '14px',
+          fontWeight: 600,
+          background: isActive ? colors.primary : '#f1f3f5',
+          color: isActive ? 'white' : colors.text,
+          border: '1px solid ' + (isActive ? colors.primary : '#e5e7eb'),
+          transition: 'background 0.15s, color 0.15s'
+        };
+      }}
     >
       {children}
     </NavLink>
